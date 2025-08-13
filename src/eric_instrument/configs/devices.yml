@@ -8,6 +8,10 @@ apstools.devices.SimulatedApsPssShutterWithStatus:
 - name: shutter
   labels: [ "shutters", "baseline" ]
 
+ophyd_async.epics.motor.Motor:
+- name: test_motor
+  prefix: "test:motor"
+
 ## THIS ARE EXAMPLES OF OTHER DEVICES THAT YOU CAN USE
 # ophyd.Signal:
 # - name: test
