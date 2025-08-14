@@ -30,7 +30,6 @@ from apsbits.utils.config_loaders import load_config
 from apsbits.utils.helper_functions import register_bluesky_magics
 from apsbits.utils.helper_functions import running_in_queueserver
 from apsbits.utils.logging_setup import configure_logging
-# from tiled.server import SimpleTiledServer
 from tiled.client import from_profile
 # from tiled.client import from_uri
 
@@ -74,10 +73,10 @@ bec, peaks = init_bec_peaks(iconfig)
 # ) as file:
 #     key = file.readline().strip()
 # KEY = "test"
-profile_name = "eric_tiled2"
+profile_name = "eric1"
 client = from_profile(profile_name)
-# client = from_uri("http://127.0.0.1:8000")
-
+# client = from_uri("http://127.0.0.1:8000",
+#                         api_key='ed7917c9b754e6cf0a4303b077971fdc30030a3a35682024d3c0b4abf772c440')
 RE, sd = init_RE(iconfig, bec_instance=bec, tiled_client_instance=client)
 
 

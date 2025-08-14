@@ -2,12 +2,17 @@ authentication:
   # The default is false. Set to true to enable any HTTP client that can
   # connect to _read_. An API key is still required to write.
   allow_anonymous_access: true
+  # single_user_api_key: secret
 trees:
   - path: /
     tree: catalog
     args:
-      uri: "http://localhost:8000"
-      writable_storage: "/"
+      uri: sqlite:////Users/ecodrea/eric-bits/catalog.db
+      writable_storage: 
+      - "/data"
+      - duckdb:////Users/ecodrea/eric-bits/storage.duckdb
+      readable_storage: 
+      - "/data"
       # This creates the database if it does not exist. This is convenient, but in
       # a horizontally-scaled deployment, this can be a race condition and multiple
       # containers may simultaneously attempt to create the database.
