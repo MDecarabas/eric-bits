@@ -64,51 +64,47 @@ register_bluesky_magics()
 # oregistry = ...
 # oregistry.clear()
 bec, peaks = init_bec_peaks(iconfig)
-# cat = init_catalog(iconfig)
-# server = SimpleTiledServer()
-# client = from_uri(server.uri)
+cat = init_catalog(iconfig)
 
-# with open(
-#     "/Users/ecodrea/eric-bits/scripts/api.txt", "r"
-# ) as file:
-#     key = file.readline().strip()
-# KEY = "test"
-profile_name = "eric1"
+# client = from_profile(profile_name)
+profile_name = iconfig.get("TILED_PROFILE_NAME")
 client = from_profile(profile_name)
-# client = from_uri("http://127.0.0.1:8000",
-#                         api_key='ed7917c9b754e6cf0a4303b077971fdc30030a3a35682024d3c0b4abf772c440')
-RE, sd = init_RE(iconfig, bec_instance=bec, tiled_client_instance=client)
+
+RE, sd = init_RE(iconfig,
+                 bec_instance=bec,
+                 cat_instance=cat,
+                 tiled_client_instance=client)
 
 
-# # Optional Nexus callback block
-# # delete this block if not using Nexus
-# if iconfig.get("NEXUS_DATA_FILES", {}).get("ENABLE", False):
-#     from .callbacks.demo_nexus_callback import nxwriter_init
+# Optional Nexus callback block
+# delete this block if not using Nexus
+if iconfig.get("NEXUS_DATA_FILES", {}).get("ENABLE", False):
+    from .callbacks.demo_nexus_callback import nxwriter_init
 
-#     nxwriter = nxwriter_init(RE)
+    nxwriter = nxwriter_init(RE)
 
-# # Optional SPEC callback block
-# # delete this block if not using SPEC
-# if iconfig.get("SPEC_DATA_FILES", {}).get("ENABLE", False):
-#     from .callbacks.demo_spec_callback import init_specwriter_with_RE
-#     from .callbacks.demo_spec_callback import newSpecFile  # noqa: F401
-#     from .callbacks.demo_spec_callback import spec_comment  # noqa: F401
-#     from .callbacks.demo_spec_callback import specwriter  # noqa: F401
+# Optional SPEC callback block
+# delete this block if not using SPEC
+if iconfig.get("SPEC_DATA_FILES", {}).get("ENABLE", False):
+    from .callbacks.demo_spec_callback import init_specwriter_with_RE
+    from .callbacks.demo_spec_callback import newSpecFile  # noqa: F401
+    from .callbacks.demo_spec_callback import spec_comment  # noqa: F401
+    from .callbacks.demo_spec_callback import specwriter  # noqa: F401
 
-    # init_specwriter_with_RE(RE)
+    init_specwriter_with_RE(RE)
 
 # These imports must come after the above setup.
 # Queue server block
 if running_in_queueserver():
     ### To make all the standard plans available in QS, import by '*', otherwise import
     ### plan by plan.
-    # from apstools.plans import lineup2  # noqa: F401
+    from apstools.plans import lineup2  # noqa: F401
     from bluesky.plans import *  # noqa: F403
 else:
     # Import bluesky plans and stubs with prefixes set by common conventions.
     # The apstools plans and utils are imported by '*'.
-    # from apstools.plans import *  # noqa: F403
-    # from apstools.utils import *  # noqa: F403
+    from apstools.plans import *  # noqa: F403
+    from apstools.utils import *  # noqa: F403
     from bluesky import plan_stubs as bps  # noqa: F401
     from bluesky import plans as bp  # noqa: F401
 

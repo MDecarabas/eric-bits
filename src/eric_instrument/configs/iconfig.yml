@@ -8,6 +8,9 @@ ICONFIG_VERSION: 2.0.1
 ### The short name for the databroker catalog.
 DATABROKER_CATALOG: &databroker_catalog temp
 
+#### Name of Tiled profile to use.
+TILED_PROFILE_NAME: eric1
+
 ### RunEngine configuration
 RUN_ENGINE:
     DEFAULT_METADATA:
