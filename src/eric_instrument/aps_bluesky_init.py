@@ -16,7 +16,7 @@ from pathlib import Path
 from apsbits.core.best_effort_init import init_bec_peaks
 from apsbits.core.catalog_init import init_catalog
 from apsbits.core.instrument_init import make_devices
-from apsbits.core.instrument_init import set_instrument
+# from apsbits.core.instrument_init import oregistry
 
 # Core Functions
 from apsbits.core.run_engine_init import init_RE
@@ -52,7 +52,6 @@ logger.info("Starting Instrument with iconfig: %s", iconfig_path)
 # Experiment specific logic, device and plan loading
 instrument = guarneri.Instrument({})
 oregistry = instrument.devices
-set_instrument(instrument)
 # Discard oregistry items loaded above.
 oregistry.clear()
 
@@ -85,45 +84,4 @@ if iconfig.get("NEXUS_DATA_FILES", {}).get("ENABLE", False):
 
     nxwriter = nxwriter_init(RE)
 
-# Optional SPEC callback block
-# delete this block if not using SPEC
-if iconfig.get("SPEC_DATA_FILES", {}).get("ENABLE", False):
-    from .callbacks.demo_spec_callback import init_specwriter_with_RE
-    from .callbacks.demo_spec_callback import newSpecFile  # noqa: F401
-    from .callbacks.demo_spec_callback import spec_comment  # noqa: F401
-    from .callbacks.demo_spec_callback import specwriter  # noqa: F401
 
-    init_specwriter_with_RE(RE)
-
-# These imports must come after the above setup.
-# Queue server block
-if running_in_queueserver():
-    ### To make all the standard plans available in QS, import by '*', otherwise import
-    ### plan by plan.
-    from apstools.plans import lineup2  # noqa: F401
-    from bluesky.plans import *  # noqa: F403
-else:
-    # Import bluesky plans and stubs with prefixes set by common conventions.
-    # The apstools plans and utils are imported by '*'.
-    from apstools.plans import *  # noqa: F403
-    from apstools.utils import *  # noqa: F403
-    from bluesky import plan_stubs as bps  # noqa: F401
-    from bluesky import plans as bp  # noqa: F401
-
-# Experiment specific logic, device and plan loading
-
-make_devices(clear=False, file="devices.yml", device_manager=instrument)  # Create the devices.
-
-
-# This is the instrument specific block
-if host_on_aps_subnet():
-    make_devices(clear=False, file="devices_aps_only.yml", device_manager=instrument)
-    # aps_dm_setup(iconfig.get("DM_SETUP_FILE"))
-
-# Setup baseline stream with connect=False is default
-# Devices with the label 'baseline' will be added to the baseline stream.
-# setup_baseline_stream(sd, oregistry, connect=False)
-
-from .plans.sim_plans import sim_count_plan  # noqa: E402, F401
-from .plans.sim_plans import sim_print_plan  # noqa: E402, F401
-from .plans.sim_plans import sim_rel_scan_plan  # noqa: E402, F401
