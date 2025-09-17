@@ -14,7 +14,7 @@ ophyd.Signal:
 apstools.synApps.Optics2Slit2D_HV:
 - name: slit1
   prefix: ioc:Slit1
-  labels: ["slits", "baseline"]
+  labels: ["slits"]
 
 # ophyd.scaler.ScalerCH:
 # - name: scaler1

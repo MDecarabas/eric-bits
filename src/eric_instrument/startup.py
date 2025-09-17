@@ -16,7 +16,7 @@ from pathlib import Path
 from apsbits.core.best_effort_init import init_bec_peaks
 from apsbits.core.catalog_init import init_catalog
 from apsbits.core.instrument_init import make_devices
-from apsbits.core.instrument_init import set_instrument
+from apsbits.core.instrument_init import init_instrument
 
 # Core Functions
 from apsbits.core.run_engine_init import init_RE
@@ -50,9 +50,7 @@ logger = logging.getLogger(__name__)
 logger.info("Starting Instrument with iconfig: %s", iconfig_path)
 
 # Experiment specific logic, device and plan loading
-instrument = guarneri.Instrument({})
-oregistry = instrument.devices
-set_instrument(instrument)
+instrument, oregistry = init_instrument("guarneri")
 # Discard oregistry items loaded above.
 oregistry.clear()
 
@@ -122,8 +120,9 @@ if host_on_aps_subnet():
 
 # Setup baseline stream with connect=False is default
 # Devices with the label 'baseline' will be added to the baseline stream.
-# setup_baseline_stream(sd, oregistry, connect=False)
+setup_baseline_stream(sd, oregistry, connect=False)
 
 from .plans.sim_plans import sim_count_plan  # noqa: E402, F401
 from .plans.sim_plans import sim_print_plan  # noqa: E402, F401
 from .plans.sim_plans import sim_rel_scan_plan  # noqa: E402, F401
+# from .plans.sim_plans import sim_rel_scan_plan3  # noqa: E402, F401
