@@ -12,22 +12,27 @@ For development and testing only, provides plans.
 
 import logging
 
-from apsbits.core.instrument_init import with_registry
 from bluesky import plan_stubs as bps
 from bluesky import plans as bp
+
+from apsbits.core.instrument_init import with_registry
 
 logger = logging.getLogger(__name__)
 logger.bsdev(__file__)
 
 DEFAULT_MD = {"title": "test run with simulator(s)"}
 
+
 @with_registry
-def sim_count_plan(oregistry, num: int = 1, imax: float = 10_000, md: dict = DEFAULT_MD):
+def sim_count_plan(
+    oregistry, num: int = 1, imax: float = 10_000, md: dict = DEFAULT_MD
+):
     """Demonstrate the ``count()`` plan."""
     logger.debug("sim_count_plan()")
     sim_det = oregistry["sim_det"]
     yield from bps.mv(sim_det.Imax, imax)
     yield from bp.count([sim_det], num=num, md=md)
+
 
 @with_registry
 def sim_print_plan(oregistry):
@@ -38,6 +43,7 @@ def sim_print_plan(oregistry):
     sim_motor = oregistry["sim_motor"]
     print("sim_print_plan(): This is a test.")
     print(f"sim_print_plan():  {sim_motor.position=}  {sim_det.read()=}.")
+
 
 @with_registry
 def sim_rel_scan_plan(
@@ -51,7 +57,6 @@ def sim_rel_scan_plan(
     md: dict = DEFAULT_MD,
 ):
     """Demonstrate the ``rel_scan()`` plan."""
-
     logger.debug("sim_rel_scan_plan()")
     sim_det = oregistry["sim_det"]
     sim_motor = oregistry["sim_motor"]

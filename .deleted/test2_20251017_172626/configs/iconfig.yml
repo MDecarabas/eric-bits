@@ -8,9 +8,6 @@ ICONFIG_VERSION: 2.0.1
 ### The short name for the databroker catalog.
 DATABROKER_CATALOG: temp
 
-### Name of Tiled profile to use.
-TILED_PROFILE_NAME: eric1
-
 ### RunEngine configuration
 RUN_ENGINE:
     DEFAULT_METADATA:
@@ -75,4 +72,4 @@ OPHYD:
         PV_WRITE: *TIMEOUT
         PV_CONNECTION: *TIMEOUT
 
-XMODE_DEBUG_LEVEL: verbose
+XMODE_DEBUG_LEVEL: Plain
