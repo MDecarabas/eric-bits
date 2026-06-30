@@ -13,12 +13,14 @@ Includes:
 import logging
 from pathlib import Path
 
+from apsbits.utils.logging_setup import configure_logging  # isort:skip
+from apsbits.core.session_setup import prepare_bits  # isort:skip
+
+# Core Functions
 from apsbits.core.best_effort_init import init_bec_peaks
 from apsbits.core.catalog_init import init_catalog
 from apsbits.core.instrument_init import init_instrument
 from apsbits.core.instrument_init import make_devices
-
-# Core Functions
 from apsbits.core.run_engine_init import init_RE
 
 # Utility functions
@@ -29,8 +31,10 @@ from apsbits.utils.baseline_setup import setup_baseline_stream
 from apsbits.utils.config_loaders import load_config
 from apsbits.utils.helper_functions import register_bluesky_magics
 from apsbits.utils.helper_functions import running_in_queueserver
-from apsbits.utils.logging_setup import configure_logging
-from tiled.client import from_profile
+
+# Run first so we get better diagnostics about subsequent problems
+configure_logging()
+prepare_bits()
 
 # Configuration block
 # Get the path to the instrument package
@@ -45,38 +49,34 @@ iconfig = load_config(iconfig_path)
 extra_logging_configs_path = instrument_path / "configs" / "extra_logging.yml"
 configure_logging(extra_logging_configs_path=extra_logging_configs_path)
 
+
 logger = logging.getLogger(__name__)
 logger.info("Starting Instrument with iconfig: %s", iconfig_path)
 
-# Experiment specific logic, device and plan loading
+# initialize instrument
 instrument, oregistry = init_instrument("guarneri")
+
 # Discard oregistry items loaded above.
 oregistry.clear()
 
 # Configure the session with callbacks, devices, and plans.
+# aps_dm_setup(iconfig.get("DM_SETUP_FILE"))
 
 # Command-line tools, such as %wa, %ct, ...
 register_bluesky_magics()
 
 # Bluesky initialization block
-# Instrument = ...
-# oregistry = ...
-# oregistry.clear()
+
 bec, peaks = init_bec_peaks(iconfig)
 cat = init_catalog(iconfig)
-
-if iconfig.get("TILED_PROFILE_NAME", {}):
-    profile_name = iconfig.get("TILED_PROFILE_NAME")
-    tiled_client = from_profile(profile_name)
-RE, sd = init_RE(iconfig, subscribers=[bec, cat, tiled_client])
-
+RE, sd = init_RE(iconfig, subscribers=[bec, cat])
 
 # Optional Nexus callback block
 # delete this block if not using Nexus
 if iconfig.get("NEXUS_DATA_FILES", {}).get("ENABLE", False):
     from .callbacks.demo_nexus_callback import nxwriter_init
 
-    nxwriter = nxwriter_init(RE)
+    nxwriter = nxwriter_init(RE, iconfig)
 
 # Optional SPEC callback block
 # delete this block if not using SPEC
@@ -84,9 +84,8 @@ if iconfig.get("SPEC_DATA_FILES", {}).get("ENABLE", False):
     from .callbacks.demo_spec_callback import init_specwriter_with_RE
     from .callbacks.demo_spec_callback import newSpecFile  # noqa: F401
     from .callbacks.demo_spec_callback import spec_comment  # noqa: F401
-    from .callbacks.demo_spec_callback import specwriter  # noqa: F401
 
-    init_specwriter_with_RE(RE)
+    specwriter = init_specwriter_with_RE(RE, iconfig)  # noqa: F811
 
 # These imports must come after the above setup.
 # Queue server block
@@ -103,15 +102,11 @@ else:
     from bluesky import plan_stubs as bps  # noqa: F401
     from bluesky import plans as bp  # noqa: F401
 
-# Experiment specific logic, device and plan loading
+# Experiment specific logic, device and plan loading. # Create the devices.
+make_devices(clear=False, file="devices.yml", device_manager=instrument)
 
-make_devices(clear=False, file="devices.yml", device_manager=instrument)  # Create the devices.
-
-
-# This is the instrument specific block
 if host_on_aps_subnet():
     make_devices(clear=False, file="devices_aps_only.yml", device_manager=instrument)
-    # aps_dm_setup(iconfig.get("DM_SETUP_FILE"))
 
 # Setup baseline stream with connect=False is default
 # Devices with the label 'baseline' will be added to the baseline stream.
@@ -120,19 +115,3 @@ setup_baseline_stream(sd, oregistry, connect=False)
 from .plans.sim_plans import sim_count_plan  # noqa: E402, F401
 from .plans.sim_plans import sim_print_plan  # noqa: E402, F401
 from .plans.sim_plans import sim_rel_scan_plan  # noqa: E402, F401
-
-
-# from bluesky.callbacks.tiled_writer import TiledWriter
-
-# from tiled.client import from_uri
-
-# CATALOG = "usaxs"
-# TILED_SERVER_URI = "http://wow:8000/"
-# API_KEY_FILE = PATH / ".tiled_api_key"
-# client = from_uri(TILED_SERVER_URI, api_key=open(API_KEY_FILE).read())
-# cat = client.get(CATALOG)
-# RE.subscribe(TiledWriter(cat, backup_directory=data_dir))
-# print(f"Using Tiled.  {type(cat)=}  {cat=!r}")
-
-# profile_name = iconfig.get("TILED_PROFILE_NAME")
-# client = from_profile(profile_name)
