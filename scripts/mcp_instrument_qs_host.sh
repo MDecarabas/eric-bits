@@ -5,25 +5,25 @@
 
 SHELL_SCRIPT_NAME=${BASH_SOURCE:-${0}}
 SCRIPT_DIR="$(dirname $(readlink -f  "${SHELL_SCRIPT_NAME}"))"
-CONFIGS_DIR=$(readlink -f "${SCRIPT_DIR}/../eric_instrument/configs")
-
+CONFIGS_DIR=$(readlink -f "${SCRIPT_DIR}/../src/mcp_instrument/configs")
+QSERVER_DIR=$(readlink -f "${SCRIPT_DIR}/../src/mcp_instrument/qserver")
 ###-----------------------------
 ### Change program defaults here
 
 # Instrument configuration YAML file with databroker catalog name.
-ICONFIG_YML="${CONFIGS_DIR}"/iconfig.yml
+ICONFIG_YML="${CONFIGS_DIR}/iconfig.yml"
 
 # Bluesky queueserver configuration YAML file.
 # This file contains the definition of 'redis_addr'.  (default: localhost:6379)
 # "export" is for BITS to identify when QS is running.
-export QS_CONFIG_YML="${SCRIPT_DIR}/qs-config.yml"
+export QS_CONFIG_YML="${QSERVER_DIR}/qs-config.yml"
 
 # Host name (from $hostname) where the queueserver host process runs.
 # QS_HOSTNAME=amber.xray.aps.anl.gov  # if a specific host is required
 QS_HOSTNAME="$(hostname)"
 
 PROCESS=start-re-manager  # from the conda environment
-STARTUP_COMMAND="${PROCESS} --config=${QS_CONFIG_YML}"
+STARTUP_COMMAND="${PROCESS} --config=${QS_CONFIG_YML} --user-group-permissions=${QSERVER_DIR}/user_group_permissions.yaml --existing-plans-devices=${QSERVER_DIR}/existing_plans_and_devices.yaml"
 
 #--------------------
 # internal configuration below
@@ -39,13 +39,18 @@ if [ -z "$STARTUP_DIR" ] ; then
     STARTUP_DIR="${SCRIPT_DIR}"
 fi
 
-if [ "${DATABROKER_CATALOG}" == "" ]; then
-    if [ -f "${ICONFIG_YML}" ]; then
-        DATABROKER_CATALOG=$(grep DATABROKER_CATALOG "${ICONFIG_YML}" | awk '{print $NF}')
-        # echo "Using catalog ${DATABROKER_CATALOG}"
-    fi
+# Prefer Tiled profile name if provided; otherwise fall back to the legacy
+# databroker catalog selection.
+#
+# - TILED_PROFILE_NAME: name of a Tiled profile (preferred)
+# - DATABROKER_CATALOG: legacy env var used by older scripts/configs
+if [[ -n "${TILED_PROFILE_NAME:-}" ]]; then
+  DEFAULT_SESSION_NAME="bluesky_queueserver-${TILED_PROFILE_NAME}"
+elif [[ -n "${DATABROKER_CATALOG:-}" ]]; then
+  DEFAULT_SESSION_NAME="bluesky_queueserver-${DATABROKER_CATALOG}"
+else
+  DEFAULT_SESSION_NAME="bluesky_queueserver-default"
 fi
-DEFAULT_SESSION_NAME="bluesky_queueserver-${DATABROKER_CATALOG}"
 
 #--------------------
 
@@ -148,9 +153,14 @@ function restart() {
 }
 
 function run_process() {
-    # only use this for diagnostic purposes
+    # Run the queueserver in the FOREGROUND, in this script's process group.
+    # A terminal Ctrl-C sends SIGINT to the whole foreground process group, so
+    # start-re-manager AND its RE worker all receive it and shut down cleanly.
+    # (SIGINT/SIGTERM to only the root PID does NOT stop the tree — it must reach
+    # the group, which is exactly what Ctrl-C does.)
     exit_if_running
     cd "${STARTUP_DIR}"
+    echo "Starting ${PROCESS} in foreground (Ctrl-C stops the queueserver and its worker)"
     ${STARTUP_COMMAND}
 }
 
@@ -189,12 +199,29 @@ function status() {
 }
 
 function stop() {
-    if checkpid; then
-        echo "Stopping ${SCREEN_SESSION} (pid=${MY_PID})"
-        kill "${MY_PID}"
-    else
+    # Find every queueserver for THIS instrument's config (pgrep works on macOS
+    # and Linux; the old checkpid used Linux-only `ps -u` and /proc).
+    local pids
+    pids=$(pgrep -f -- "--config=${QS_CONFIG_YML}" 2>/dev/null)
+    if [ -z "${pids}" ]; then
         echo "${SESSION_NAME} is not running"
+    else
+        echo "Stopping queueserver (pids: ${pids})"
+        # SIGINT each instance's whole process GROUP so start-re-manager AND its
+        # RE worker shut down (a plain SIGTERM to the root PID does not stop the
+        # tree). Then SIGKILL any straggler so nothing survives.
+        for pid in ${pids}; do
+            kill -INT -"$(ps -o pgid= -p "${pid}" | tr -d ' ')" 2>/dev/null
+        done
+        sleep 3
+        for pid in $(pgrep -f -- "--config=${QS_CONFIG_YML}" 2>/dev/null); do
+            kill -KILL -"$(ps -o pgid= -p "${pid}" | tr -d ' ')" 2>/dev/null
+        done
     fi
+    # Tear down any leftover screen session shell from `start`.
+    for sess in $(screen -ls 2>/dev/null | grep -oE "[0-9]+\.${SESSION_NAME}"); do
+        screen -S "${sess}" -X quit 2>/dev/null
+    done
 }
 
 function usage() {

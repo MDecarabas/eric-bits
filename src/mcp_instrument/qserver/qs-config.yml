@@ -32,7 +32,7 @@ operation:
 
 startup:
     keep_re: true
-    startup_module: eric_instrument.startup
+    startup_module: mcp_instrument.startup
     existing_plans_and_devices_path: ./
     user_group_permissions_path: ./
 
